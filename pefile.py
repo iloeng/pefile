@@ -20,27 +20,21 @@ __author__ = "Ero Carrera"
 __version__ = "2023.2.7"
 __contact__ = "ero.carrera@gmail.com"
 
-import collections
-import os
-import struct
 import codecs
-import time
-import math
-import string
-import mmap
-import uuid
-import gc
-
-
-from collections import Counter
-from typing import Union
-from hashlib import sha1
-from hashlib import sha256
-from hashlib import sha512
-from hashlib import md5
-
-import functools
+import collections
 import copy as copymod
+import functools
+import gc
+import math
+import mmap
+import os
+import string
+import struct
+import time
+import uuid
+from collections import Counter
+from hashlib import md5, sha1, sha256, sha512
+from typing import Union
 
 import ordlookup
 
@@ -1004,7 +998,6 @@ class Structure:
         if len(data) > self.__format_length__:
             data = data[: self.__format_length__]
 
-        # OC Patch:
         # Some malware have incorrect header lengths.
         # Fail gracefully if this occurs
         # Buggy malware: a29b0118af8b7408444df81701ad5a7f
@@ -1342,7 +1335,7 @@ def set_bitfields_format(format):
     class Accumulator:
         def __init__(self, fmt, comp_fields):
             self._subfields = []
-            # add a prefix to distinguish the artificially created compoud field
+            # add a prefix to distinguish the artificially created compound field
             # from regular fields
             self._name = "~"
             self._type = None
@@ -3078,7 +3071,6 @@ class PE:
         if not self.DOS_HEADER or self.DOS_HEADER.e_magic != IMAGE_DOS_SIGNATURE:
             raise PEFormatError("DOS Header magic not found.")
 
-        # OC Patch:
         # Check for sane value in e_lfanew
         #
         if self.DOS_HEADER.e_lfanew > len(self.__data__):
@@ -3094,7 +3086,6 @@ class PE:
 
         # We better check the signature right here, before the file screws
         # around with sections:
-        # OC Patch:
         # Some malware will cause the Signature value to not exist at all
         if not self.NT_HEADERS or not self.NT_HEADERS.Signature:
             raise PEFormatError("NT Headers not found.")
@@ -3120,7 +3111,7 @@ class PE:
         if not self.FILE_HEADER:
             raise PEFormatError("File Header missing")
 
-        # Set the image's flags according the the Characteristics member
+        # Set the image's flags according to the Characteristics member
         set_flags(self.FILE_HEADER, self.FILE_HEADER.Characteristics, image_flags)
 
         optional_header_offset = nt_headers_offset + 4 + self.FILE_HEADER.sizeof()
@@ -3216,7 +3207,6 @@ class PE:
         if not self.FILE_HEADER:
             raise PEFormatError("File Header missing")
 
-        # OC Patch:
         # Die gracefully if there is no OPTIONAL_HEADER field
         # 975440f5ad5e2e4a92c4d9a5f22f75c1
         if self.OPTIONAL_HEADER is None:
@@ -3232,7 +3222,7 @@ class PE:
             DLL_CHARACTERISTICS, "IMAGE_DLLCHARACTERISTICS_"
         )
 
-        # Set the Dll Characteristics flags according the the DllCharacteristics member
+        # Set the Dll Characteristics flags according to the DllCharacteristics member
         set_flags(
             self.OPTIONAL_HEADER,
             self.OPTIONAL_HEADER.DllCharacteristics,
@@ -3312,7 +3302,6 @@ class PE:
 
         offset = self.parse_sections(sections_offset)
 
-        # OC Patch:
         # There could be a problem if there are no raw data sections
         # greater than 0
         # fc91013eb72529da005110a3403541b6 example
@@ -3410,7 +3399,7 @@ class PE:
 
         clear_data = bytearray()
         for idx, val in enumerate(raw_data):
-            clear_data.append((ord_(val) ^ ord_(key[idx % len(key)])))
+            clear_data.append(ord_(val) ^ ord_(key[idx % len(key)]))
         result["clear_data"] = bytes(clear_data)
 
         # the checksum should be present 3 times after the DanS signature
@@ -3640,7 +3629,7 @@ class PE:
 
             section_flags = retrieve_flags(SECTION_CHARACTERISTICS, "IMAGE_SCN_")
 
-            # Set the section's flags according the the Characteristics member
+            # Set the section's flags according to the Characteristics member
             set_flags(section, section.Characteristics, section_flags)
 
             if section.__dict__.get(
@@ -3727,8 +3716,6 @@ class PE:
                 directories = [directories]
 
         for entry in directory_parsing:
-            # OC Patch:
-            #
             try:
                 directory_index = DIRECTORY_ENTRY[entry[0]]
                 dir_entry = self.OPTIONAL_HEADER.DATA_DIRECTORY[directory_index]
@@ -3936,7 +3923,7 @@ class PE:
                     self.__data__[rva : rva + bnd_descr_size],
                     file_offset=rva,
                 )
-                # OC Patch:
+                
                 if not bnd_frwd_ref:
                     raise PEFormatError("IMAGE_BOUND_FORWARDER_REF cannot be read")
                 rva += bnd_frwd_ref.sizeof()
@@ -4265,7 +4252,6 @@ class PE:
 
         relocations = []
         while rva < end:
-            # OC Patch:
             # Malware that has bad RVA entries will cause an error.
             # Just continue on after an exception
             #
@@ -4594,7 +4580,6 @@ class PE:
         are available as its attributes.
         """
 
-        # OC Patch:
         if dirs is None:
             dirs = [rva]
 
@@ -4741,8 +4726,6 @@ class PE:
                     )
 
             if res.DataIsDirectory:
-                # OC Patch:
-                #
                 # One trick malware can do is to recursively reference
                 # the next directory. This causes hilarity to ensue when
                 # trying to parse everything correctly.
@@ -5458,7 +5441,7 @@ class PE:
 
             # If the function's RVA points within the export directory
             # it will point to a string with the forwarded symbol's string
-            # instead of pointing the the function start address.
+            # instead of pointing to the function start address.
             if symbol_address >= rva and symbol_address < rva + size:
                 forwarder_str = self.get_string_at_rva(symbol_address)
                 try:
@@ -5919,7 +5902,7 @@ class PE:
                 )
 
         if not dllnames_only:
-            suspicious_imports = set(["LoadLibrary", "GetProcAddress"])
+            suspicious_imports = {"LoadLibrary", "GetProcAddress"}
             suspicious_imports_count = 0
             total_symbols = 0
             for imp_dll in import_descs:
@@ -5971,7 +5954,6 @@ class PE:
         # bound.
         iat = self.get_import_table(first_thunk, max_length, contains_addresses)
 
-        # OC Patch:
         # Would crash if IAT or ILT had None type
         if (not iat or len(iat) == 0) and (not ilt or len(ilt) == 0):
             self.__warnings.append(
@@ -6304,7 +6286,7 @@ class PE:
         return mapped_data
 
     def get_resources_strings(self):
-        """Returns a list of all the strings found withing the resources (if any).
+        """Returns a list of all the strings found within the resources (if any).
 
         This method will scan all entries in the resources directory of the PE, if
         there is one, and will return a [] with the strings.
@@ -7228,7 +7210,6 @@ class PE:
 
         return dump_dict
 
-    # OC Patch
     def get_physical_by_rva(self, rva):
         """Gets the physical address in the PE file from an RVA value."""
         try:
@@ -7825,15 +7806,15 @@ class PE:
         # If it imports from "ntoskrnl.exe" or other kernel components it should
         # be a driver
         #
-        system_DLLs = set(
-            (b"ntoskrnl.exe", b"hal.dll", b"ndis.sys", b"bootvid.dll", b"kdcom.dll")
-        )
+        system_DLLs = {
+            b"ntoskrnl.exe", b"hal.dll", b"ndis.sys", b"bootvid.dll", b"kdcom.dll"
+        }
         if system_DLLs.intersection(
             [imp.dll.lower() for imp in self.DIRECTORY_ENTRY_IMPORT]
         ):
             return True
 
-        driver_like_section_names = set((b"page", b"paged"))
+        driver_like_section_names = {b"page", b"paged"}
         if driver_like_section_names.intersection(
             [section.Name.lower().rstrip(b"\x00") for section in self.sections]
         ) and (
@@ -7950,8 +7931,8 @@ class PE:
                 and self.SectionAlignment_Warning is False
             ):
                 self.__warnings.append(
-                    f"If SectionAlignment({section_alignment:x}) < 0x1000 it should "
-                    f"equal FileAlignment({file_alignment:x})"
+                    f"If SectionAlignment(0x{section_alignment:x}) < 0x1000 it should "
+                    f"equal FileAlignment(0x{file_alignment:x})"
                 )
                 self.SectionAlignment_Warning = True
 
